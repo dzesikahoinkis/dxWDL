@@ -1,9 +1,13 @@
 # A library of individual tasks. The plan is to import this file into
 #the workflows. This will avoid creating duplicate applets, and reduces compilation
 #time.
+version 1.0
+
 task Add {
-    Int a
-    Int b
+    input {
+        Int a
+        Int b
+    }
 
     command {
         echo $((${a} + ${b}))
@@ -14,8 +18,10 @@ task Add {
 }
 
 task Multiply {
-    Int a
-    Int b
+    input {
+        Int a
+        Int b
+    }
 
     command {
         echo $((a * b))
@@ -26,7 +32,9 @@ task Multiply {
 }
 
 task Inc {
-    Int i
+    input {
+        Int i
+    }
 
     command <<<
         python -c "print(${i} + 1)"
@@ -37,7 +45,9 @@ task Inc {
 }
 
 task Sum {
-    Array[Int] ints
+    input {
+        Array[Int] ints
+    }
 
     command <<<
         python -c "print(${sep="+" ints})"
@@ -48,7 +58,9 @@ task Sum {
 }
 
 task Twice {
-    Int i
+    input {
+        Int i
+    }
 
     command <<<
         python -c "print(${i} * 2)"
@@ -59,7 +71,9 @@ task Twice {
 }
 
 task Mod7 {
-    Int i
+    input {
+        Int i
+    }
 
     command <<<
         python -c "print(${i} % 7)"
@@ -70,8 +84,10 @@ task Mod7 {
 }
 
 task IntOps {
-    Int a
-    Int b
+    input {
+        Int a
+        Int b
+    }
 
     command {
     }
@@ -88,8 +104,10 @@ task IntOps {
 
 # Create a complex number with a WDL object
 task ComplexGen {
-    Int a
-    Int b
+    input {
+        Int a
+        Int b
+    }
 
     command <<<
 python <<CODE
@@ -104,8 +122,10 @@ CODE
 
 # Add to complex numbers represented as objects
 task ComplexAdd {
-    Object y
-    Object z
+    input {
+        Object y
+        Object z
+    }
 
     command <<<
 python <<CODE
@@ -122,7 +142,9 @@ CODE
 
 # Create an array of integers from an integer.
 task RangeFromInt {
-    Int len
+    input {
+        Int len
+    }
     command {}
     output {
         Array[Int] result = range(len)
@@ -131,7 +153,9 @@ task RangeFromInt {
 
 # checking behavior with empty arrays
 task ArrayLength {
-    Array[Int] ai
+    input {
+        Array[Int] ai
+    }
     command {}
     output {
         Int result = length(ai)
@@ -139,7 +163,9 @@ task ArrayLength {
 }
 
 task MaybeInt {
-    Int? a
+    input {
+        Int? a
+    }
     command {
     }
     output {
