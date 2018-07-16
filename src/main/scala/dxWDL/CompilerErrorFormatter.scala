@@ -1,13 +1,23 @@
 package dxWDL
 
-import wdl.draft2.parser.WdlParser._
-import wdl.draft2.model.AstTools
-import wdl.draft2.model.{WdlExpression, WdlCall, WorkflowOutput}
+import scala.collection.JavaConverters._
+import wdl.draft3.parser.WdlParser._
 import wom.core._
-import wom.types.WomType
 
 case class CompilerErrorFormatter(resource: String,
                                   terminalMap: Map[Terminal, WorkflowSource]) {
+    private def findFirstTerminal(astNode: AstNode) : Option[Terminal] = {
+        Option(astNode) flatMap {
+            case l: AstList =>
+                val v: Vector[AstNode] = l.asScala.toVector
+                v.flatMap(x => findFirstTerminal(x)).headOption
+            case a: Ast => a.getAttributes.asScala.toMap.flatMap(
+                { case (_, v) => findFirstTerminal(v) }
+            ).headOption
+            case t: Terminal => Option(t)
+        }
+    }
+
     private def line(t:Terminal): String = {
         terminalMap.get(t) match {
             case None => throw new Exception(s"Could not find terminal ${t} in source file ${resource}")
@@ -24,147 +34,67 @@ case class CompilerErrorFormatter(resource: String,
         s"${resource}, line ${lineNum}"
     }
 
-    def compilerInternalError(ast: Ast, featureName: String) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|Should not reach this point in the code: ${featureName}
+    private def makeErrorMessage(astNode: AstNode, msg: String) : String = {
+        val t: Terminal = findFirstTerminal(astNode).get
+        s"""|${msg}
             |
             |${textualSource(t)}
             |${pointToSource(t)}
             |""".stripMargin
     }
 
-    def couldNotEvaluateType(expr: WdlExpression) : String = {
-        val t: Terminal = AstTools.findTerminals(expr.ast).head
-                s"""|Could not evaluate the WDL type for expression
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-                    |""".stripMargin
+    def compilerInternalError(astNode: AstNode, featureName: String) : String = {
+        makeErrorMessage(astNode,
+                         s"Should not reach this point in the code: ${featureName}")
     }
 
-    def illegalCallName(call: WdlCall) : String = {
-        val t: Terminal = AstTools.findTerminals(call.ast).head
-        s"""|Illegal call name ${call.unqualifiedName}
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def couldNotEvaluateType(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Could not evaluate the WDL type for expression")
     }
 
-    def illegalVariableName(ast: Ast) : String = {
-        val name: Terminal = ast.getAttribute("name").asInstanceOf[Terminal]
-        s"""|Illegal variable name
-            |
-            |${textualSource(name)}
-            |${pointToSource(name)}
-            |""".stripMargin
+    def illegalCallName(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Illegal call name")
     }
 
-    def missingCallArgument(ast: Ast, msg:String) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|Call is missing a compulsory argument.
-            |${msg}
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def illegalVariableName(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Illegal variable name")
+    }
+
+    def missingCallArgument(astNode: AstNode, msg:String) : String = {
+        makeErrorMessage(astNode,
+                         s"""|Call is missing a compulsory argument.
+                             |${msg}""".stripMargin)
     }
 
     def missingVarRef(t: Terminal) : String = {
-        s"""|Reference to missing variable
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+        makeErrorMessage(t, "Reference to missing variable")
     }
 
-    def missingVarRef(ast: Ast) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|Reference to missing variable
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def missingVarRef(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Reference to missing variable")
     }
 
-    def notCurrentlySupported(ast: Ast, featureName: String) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|Not currently supported: ${featureName}
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def notCurrentlySupported(astNode: AstNode, featureName: String) : String = {
+        makeErrorMessage(astNode,
+                         s"Not currently supported: ${featureName}")
     }
 
-    def onlyFilesCanBeStreamed(ast: Ast) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|Only files can be streamed
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def onlyFilesCanBeStreamed(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Only files can be streamed")
     }
 
-    def taskInputDefaultMustBeConst(expr: WdlExpression) : String = {
-        val t: Terminal = AstTools.findTerminals(expr.ast).head
-        s"""|Task input expression ${expr.toWomString} must be const or variable
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def taskInputDefaultMustBeConst(astNode: AstNode) : String = {
+        makeErrorMessage(astNode, "Task input expression must be const or variable")
     }
 
-    def taskNativeRuntimeBlockShouldBeEmpty(ast: Ast) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|This is a native task, a wrapper for a dnanexus call. It should
-            |have an empty runtime section.
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
+    def taskNativeRuntimeBlockShouldBeEmpty(astNode: AstNode) : String = {
+        makeErrorMessage(astNode,
+                         s"""|This is a native task, a wrapper for a dnanexus call. It should
+                             |have an empty runtime section.""".stripMargin)
     }
 
-    // debugging
-    def traceExpression(ast: Ast) : String = {
-        val t: Terminal = AstTools.findTerminals(ast).head
-        s"""|
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
-    }
-
-    def typeConversionRequired(expr: WdlExpression,
-                               call: WdlCall,
-                               srcType: WomType,
-                               trgType: WomType) : String = {
-        val termList: Seq[Terminal] = AstTools.findTerminals(expr.ast)
-        val t:Terminal = termList match {
-            case Nil => AstTools.findTerminals(call.ast).head
-            case _ => AstTools.findTerminals(expr.ast).head
-        }
-        s"""|Warning: expression <${expr.toWomString}> is coerced from type ${srcType.toDisplayString}
-            |to ${trgType.toDisplayString}.
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
-    }
-
-
-    def workflowInputDefaultMustBeConst(expr: WdlExpression) = {
-        val t: Terminal = AstTools.findTerminals(expr.ast).head
-        s"""|Workflow input expression ${expr.toWomString} must be const or variable
-            |
-            |${textualSource(t)}
-            |${pointToSource(t)}
-            |""".stripMargin
-    }
-
-    def workflowOutputIsPartial(wot: WorkflowOutput) = {
-        s"""|Workflow output must have a name, type, and value
-            |
-            | ${resource}
-            | ${wot.toWdlString}
-            |""".stripMargin
+    def workflowInputDefaultMustBeConst(astNode: AstNode) : String = {
+        makeErrorMessage(astNode,
+                         "Workflow input expression must be const or variable")
     }
 }

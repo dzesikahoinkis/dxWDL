@@ -12,7 +12,7 @@ resolvers ++= Seq(
 )
 
 // reduce the maximum number of errors shown by the Scala compiler
-maxErrors := 10
+maxErrors := 5
 
 //coverageEnabled := true
 
@@ -56,12 +56,12 @@ assemblyOutputPath in assembly := file("applet_resources/resources/dxWDL.jar")
 assemblyMergeStrategy in assembly := customMergeStrategy
 
 libraryDependencies ++= Seq(
-//    "org.broadinstitute" %% "cromwell-wdl-model-core" % "32",
-//    "org.broadinstitute" %% "cromwell-wdl-transforms-draft2" % "32",
-    "org.broadinstitute" %% "cromwell-wdl-model-draft2" % "33.1",
-//    "org.broadinstitute" %% "cromwell-wom" % "32",
-//    "org.broadinstitute" %% "wdl-draft2" % "32",
-//    "org.broadinstitute" %% "language-factory-core" % "32",
+    "org.broadinstitute" %% "cromwell-wdl-model-core" % "33.1",
+    "org.broadinstitute" %% "cromwell-wdl-transforms-draft3" % "33.1",
+    "org.broadinstitute" %% "cromwell-wdl-model-draft3" % "33.1",
+    "org.broadinstitute" %% "cromwell-wom" % "33.1",
+    "org.broadinstitute" %% "wdl-draft3" % "33.1",
+//    "org.broadinstitute" %% "language-factory-core" % "33.1",
 
     "io.spray" %% "spray-json" % "1.3.2",
     "net.jcazevedo" %% "moultingyaml" % "0.4.0",
