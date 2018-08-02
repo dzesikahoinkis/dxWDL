@@ -1,7 +1,6 @@
 package dxWDL
 
 import com.dnanexus.{DXProject}
-import com.typesafe.config._
 import dxWDL.compiler.IR
 import java.nio.file.{Path, Paths}
 import org.apache.log4j.{Level, Logger}
@@ -542,11 +541,6 @@ object Main extends App {
                     }
                 }
 
-            // write outputs, ignore null values, these could occur for optional
-            // values that were not specified.
-            val json = JsObject(outputFields.filter{
-                                    case (_,jsValue) => jsValue != null && jsValue != JsNull
-                                })
             val ast_pp = json.prettyPrint
             Utils.writeFileContent(jobOutputPath, ast_pp)
             System.err.println(s"Wrote outputs ${ast_pp}")
@@ -586,7 +580,7 @@ object Main extends App {
             case None => BadUsageTermination("")
             case Some(x) => x match {
                 case Actions.Compile => compile(args.tail)
-                case Actions.Config => SuccessfulTermination(ConfigFactory.load().toString)
+                case Actions.Config => SuccessfulTermination(Utils.getConfig.toString)
                 case Actions.DXNI => dxni(args.tail)
                 case Actions.Internal => internalOp(args.tail)
                 case Actions.Version => SuccessfulTermination(Utils.getVersion())

@@ -56,7 +56,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
                       runMode: RunnerWfFragmentMode.Value,
                       runtimeDebugLevel: Int) {
     private val verbose = runtimeDebugLevel >= 1
-    //private val maxVerboseLevel = (runtimeDebugLevel == 2)
+    private val maxVerboseLevel = (runtimeDebugLevel == 2)
 
     private def makeOptionalWomValue(t: WomType,
                                      v: WomValue) : WomValue = {
@@ -317,18 +317,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
                 val fields = WdlVarLinks.genFields(wvl, varName)
                 accu ++ fields.toMap
         }
-        val mNonNull = m.filter{
-            case (key, value) =>
-                if (value == null) false
-                else if (value == JsNull) false
-                else if (value.isInstanceOf[JsArray]) {
-                    val jsa = value.asInstanceOf[JsArray]
-                    if (jsa.elements.length == 0) false
-                    else true
-                } else
-                    true
-        }
-        (wvlInputs, JsObject(mNonNull))
+        (wvlInputs, JsObject(m))
     }
 
     // coerce a WDL value to the required type (if needed)
@@ -740,7 +729,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
     private def collectCallField(fieldName: String,
                                  womType: WomType,
                                  aggr: Aggr) : WomValue = {
-        Utils.appletLog(verbose,
+        Utils.appletLog(maxVerboseLevel,
                         s"collectCallField ${fieldName} with type ${womType} from ${aggr}")
 
         (aggr, womType) match {
