@@ -501,7 +501,7 @@ object Main extends App {
         if (op == InternalOp.TaskCheckInstanceType) {
             // special operation to check if this task is on the right instance type
             val task = taskOfNamespace(ns)
-            val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, Some(task))
+            val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, task)
             val r = runner.Task(task, instanceTypeDB, cef, rtDebugLvl)
             val correctInstanceType:Boolean = r.checkInstanceType(inputSpec, outputSpec, inputs)
             SuccessfulTermination(correctInstanceType.toString)
@@ -510,7 +510,7 @@ object Main extends App {
                 if (isTaskOp(op)) {
                     // Running tasks
                     val task = taskOfNamespace(ns)
-                    val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, Some(task))
+                    val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, task)
                     op match {
                         case InternalOp.TaskEpilog =>
                             val r = runner.Task(task, instanceTypeDB, cef, rtDebugLvl)
@@ -523,8 +523,8 @@ object Main extends App {
                             r.relaunch(inputSpec, outputSpec, inputs)
                     }
                 } else {
-                    val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, None)
                     val nswf = ns.asInstanceOf[WdlNamespaceWithWorkflow]
+                    val inputs = WdlVarLinks.loadJobInputsAsLinks(inputLines, inputSpec, nswf.workflow)
                     op match {
                         case InternalOp.Collect =>
                             runner.WfFragment.apply(nswf,
@@ -541,6 +541,9 @@ object Main extends App {
                     }
                 }
 
+            // write outputs. Some of the values may be null, dnanexus should be
+            // able to deal with this.
+            val json = JsObject(outputFields)
             val ast_pp = json.prettyPrint
             Utils.writeFileContent(jobOutputPath, ast_pp)
             System.err.println(s"Wrote outputs ${ast_pp}")
@@ -580,7 +583,7 @@ object Main extends App {
             case None => BadUsageTermination("")
             case Some(x) => x match {
                 case Actions.Compile => compile(args.tail)
-                case Actions.Config => SuccessfulTermination(Utils.getConfig.toString)
+                case Actions.Config => SuccessfulTermination(Utils.getRegions().toString)
                 case Actions.DXNI => dxni(args.tail)
                 case Actions.Internal => internalOp(args.tail)
                 case Actions.Version => SuccessfulTermination(Utils.getVersion())

@@ -767,7 +767,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
 
                 // Import the value from the dx-executable, to a local WOM value.
                 // Avoid any downloads
-                val wvl = WdlVarLinks.importFromDxExec(womType, DeclAttrs.empty, jsv)
+                val wvl = WdlVarLinks.importFromDxExec(womType, jsv)
                 val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
                 womValue
 

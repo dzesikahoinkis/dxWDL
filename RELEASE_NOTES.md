@@ -1,7 +1,7 @@
 # Release Notes
 
 ## 0.74.1
-- Removed inlining of tasks code into auxiliary applets. This was causing
+- Limited inlining of tasks code into auxiliary applets. This was causing
 a workflow to change when a task was modified, violating separate compilation,
 and not allowing executable cloning to work.
 

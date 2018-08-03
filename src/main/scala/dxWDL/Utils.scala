@@ -196,7 +196,7 @@ object Utils {
 
     // Check if the WDL expression is a constant. If so, calculate and return it.
     // Otherwise, return None.
-    private def ifConstEval(expr: WdlExpression) : Option[WomValue] = {
+    def ifConstEval(expr: WdlExpression) : Option[WomValue] = {
         try {
             def lookup(x:String) : WomValue = {
                 throw new VariableAccessException()

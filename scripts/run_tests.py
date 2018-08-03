@@ -22,7 +22,7 @@ test_dir = os.path.join(os.path.abspath(top_dir), "test")
 git_revision = subprocess.check_output(["git", "describe", "--always", "--dirty", "--tags"]).strip()
 test_files={}
 test_failing=set(["bad_status",
-                  #"bad_status2",
+                  "bad_status2",
                   "missing_output"])
 reserved_test_names=['M', 'All', 'list']
 
