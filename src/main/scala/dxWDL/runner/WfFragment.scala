@@ -748,38 +748,40 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
     // Aggregate all the values for a particular call field.
     //
     // Look at the outputs of each execution, and retrieve the
-    // particular field name
+    // particular field name. Avoid any downloads.
     private def collectCallField(fieldName: String,
                                  womType: WomType,
                                  aggr: Aggr) : WomValue = {
         Utils.appletLog(maxVerboseLevel,
                         s"collectCallField ${fieldName} with type ${womType} from ${aggr}")
 
-        // base case of the recursion.
-        //
-        // The field may be missing, put in a JsNull in this case.
-        def base(seqNum: Int, womType: WomType) : WomValue = {
-            val childDesc = execSeqMap(seqNum)
-            val jsv = childDesc.outputs.asJsObject.fields.get(fieldName) match {
-                case None if isOptional(womType) => JsNull
-                case None => throw new NullValueException(s"collect fieldName ${fieldName} with ${womType}")
-                case Some(jsv) => jsv
-            }
-
-            // Import the value from the dx-executable, to a local WOM value.
-            // Avoid any downloads
-            val wvl = WdlVarLinks.importFromDxExec(womType, jsv)
-            val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
-            womValue
-        }
-
         (aggr, womType) match {
             case (AggrCall(_,seqNum,_), _) =>
-                base(seqNum, womType)
-            case (AggrCallOption(None), _) =>
-                makeOptionalNone(womType)
-            case (AggrCallOption(Some(AggrCall(_,seqNum,_))), _) =>
-                base(seqNum, womType)
+                val childDesc = execSeqMap(seqNum)
+                val jsv = childDesc.outputs.asJsObject.fields.get(fieldName) match {
+                    case None if isOptional(womType) => JsNull
+                    case None => throw new NullValueException(s"collect fieldName ${fieldName} with ${womType}")
+                    case Some(jsv) => jsv
+                }
+                val wvl = WdlVarLinks.importFromDxExec(womType, jsv)
+                val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
+                womValue
+
+            case (AggrCallOption(None), WomOptionalType(tInner)) =>
+                WomOptionalValue(tInner, None)
+
+            case (AggrCallOption(Some(AggrCall(_,seqNum,_))), WomOptionalType(tInner)) =>
+                val childDesc = execSeqMap(seqNum)
+                childDesc.outputs.asJsObject.fields.get(fieldName) match {
+                    case None =>
+                        WomOptionalValue(tInner, None)
+                    case Some(jsv) =>
+                        // Import the value from the dx-executable, to a local WOM value.
+                        // Avoid any downloads
+                        val wvl = WdlVarLinks.importFromDxExec(tInner, jsv)
+                        val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
+                        WomOptionalValue(tInner, Some(womValue))
+                }
 
             case (AggrCallArray(children), WomArrayType(tInner)) =>
                 // recurse into the children, build WomValues
@@ -789,7 +791,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
             case (AggrCallOption(Some(child)), WomOptionalType(tInner)) =>
                 // The child is not a simple call, it is a more complex case
                 val value = collectCallField(fieldName, tInner, child)
-                makeOptionalWomValue(womType, value)
+                WomOptionalValue(tInner, Some(v))
             }
     }
 
