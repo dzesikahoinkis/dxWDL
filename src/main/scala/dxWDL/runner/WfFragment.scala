@@ -755,39 +755,42 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
         Utils.appletLog(maxVerboseLevel,
                         s"collectCallField ${fieldName} with type ${womType} from ${aggr}")
 
+        // base case of the recursion.
+        //
+        // The field may be missing, put in a JsNull in this case.
+        def base(seqNum: Int, womType: WomType) : WomValue = {
+            val childDesc = execSeqMap(seqNum)
+            val jsv = childDesc.outputs.asJsObject.fields.get(fieldName) match {
+                case None if isOptional(womType) => JsNull
+                case None => throw new NullValueException(s"collect fieldName ${fieldName} with ${womType}")
+                case Some(jsv) => jsv
+            }
+
+            // Import the value from the dx-executable, to a local WOM value.
+            // Avoid any downloads
+            val wvl = WdlVarLinks.importFromDxExec(womType, jsv)
+            val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
+            womValue
+        }
+
         (aggr, womType) match {
             case (AggrCall(_,seqNum,_), _) =>
-                // The field may be missing, put in a JsNull in this case.
-                val childDesc = execSeqMap(seqNum)
-                val jsv = childDesc.outputs.asJsObject.fields.get(fieldName) match {
-                    case None if isOptional(womType) => JsNull
-                    case None => throw new NullValueException(s"collect fieldName ${fieldName} with ${womType}")
-                    case Some(jsv) => jsv
-                }
-
-                // Import the value from the dx-executable, to a local WOM value.
-                // Avoid any downloads
-                val wvl = WdlVarLinks.importFromDxExec(womType, jsv)
-                val womValue = WdlVarLinks.eval(wvl, IOMode.Remote, IODirection.Zero)
-                womValue
+                base(seqNum, womType)
+            case (AggrCallOption(None), _) =>
+                makeOptionalNone(womType)
+            case (AggrCallOption(Some(AggrCall(_,seqNum,_))), _) =>
+                base(seqNum, womType)
 
             case (AggrCallArray(children), WomArrayType(tInner)) =>
                 // recurse into the children, build WomValues
                 val children2 = children.map{ child => collectCallField(fieldName, tInner, child) }
                 WomArray(WomArrayType(tInner), children2)
 
-            case (AggrCallOption(None), _) =>
-                makeOptionalNone(womType)
-
             case (AggrCallOption(Some(child)), WomOptionalType(tInner)) =>
-                try {
-                    val value = collectCallField(fieldName, tInner, child)
-                    makeOptionalWomValue(womType, value)
-                } catch {
-                    case _ : NullValueException =>
-                        makeOptionalNone(womType)
-                }
-        }
+                // The child is not a simple call, it is a more complex case
+                val value = collectCallField(fieldName, tInner, child)
+                makeOptionalWomValue(womType, value)
+            }
     }
 
     // The WDL workflow has no scatters or if blocks.
