@@ -791,7 +791,7 @@ case class WfFragment(nswf: WdlNamespaceWithWorkflow,
             case (AggrCallOption(Some(child)), WomOptionalType(tInner)) =>
                 // The child is not a simple call, it is a more complex case
                 val value = collectCallField(fieldName, tInner, child)
-                WomOptionalValue(tInner, Some(v))
+                WomOptionalValue(tInner, Some(value))
             }
     }
 
